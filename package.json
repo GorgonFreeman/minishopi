@@ -8,10 +8,10 @@
   },
   "scripts": {
     "start": "node --env-file=.env server.js",
-    "tunnel": "ngrok http 3121"
+    "tunnel": "cloudflared tunnel --url http://localhost:3121"
   },
   "dependencies": {
     "@shopify/shopify-api": "^13.0.0",
-    "ngrok": "^5.0.0-beta.2"
+    "cloudflared": "^0.7.1"
   }
 }
