@@ -8,7 +8,9 @@
   },
   "scripts": {
     "build": "vite build",
+    "build:watch": "vite build --watch",
     "start": "node --env-file=.env server.js",
+    "dev": "vite build && concurrently -k \"npm run build:watch\" \"npm start\"",
     "tunnel": "cloudflared tunnel --url http://localhost:3121"
   },
   "dependencies": {
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.1",
     "vite": "^6.3.5"
   }
 }

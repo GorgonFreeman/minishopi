@@ -47,8 +47,17 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
 
 6. **Run the server**
 
+   Use either a one-off build + server, or the watch workflow:
+
    ```bash
+   npm run build
    npm start
+   ```
+
+   Or while editing the UI:
+
+   ```bash
+   npm run dev
    ```
 
 7. **Install on your dev store** from the Partners app page → *Test your app* → pick the dev store. You should see the Polaris shell with **It's minishopi c:**.
@@ -58,7 +67,8 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
 - Source lives under **`src/`** (`App.jsx`, `main.jsx`). Root **`index.html`** is the Vite entry.
 - **`vite.config.js`** only enables `@vitejs/plugin-react` and writes output to **`dist/`**.
 - **`server.js`** serves **`dist/index.html`** for authenticated embed requests (injecting App Bridge + API key meta) and **`/assets/*`** for hashed JS/CSS from the build.
-- After you change UI code, run **`npm run build`** again before refreshing the app.
+- **Development**: run **`npm run dev`** — it runs one production build, starts **`server.js`**, and keeps **`vite build --watch`** running so **`dist/`** updates when you edit **`src/`** or **`index.html`**. Refresh the embedded app after each rebuild (Ctrl+C stops both processes).
+- **Production-style run** (single build): **`npm run build`** then **`npm start`**.
 
 ## Notes
 

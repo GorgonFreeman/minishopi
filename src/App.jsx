@@ -7,7 +7,7 @@ export default function App() {
       <Page title="minishopi">
         <Card>
           <Text variant="bodyMd" as="p">
-            It's minishopi c:
+            It's minishopi boi c:
           </Text>
         </Card>
       </Page>
