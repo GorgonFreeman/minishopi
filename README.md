@@ -19,11 +19,10 @@ The most minimal Node Shopify embedded app I could manage. Single file (`server.
 2. **Start a tunnel** so Shopify can reach your local server:
 
    ```bash
-   cloudflared tunnel --url http://localhost:3000
-   # or: ngrok http 3000
+   npm run tunnel
    ```
 
-   Copy the HTTPS URL it prints (e.g. `https://something.trycloudflare.com`).
+   Copy the HTTPS URL it prints (e.g. `https://something.ngrok-free.app`).
 
 3. **Create the app in Shopify Partners**
    - Go to https://partners.shopify.com → Apps → Create app → Create app manually
