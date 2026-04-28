@@ -1,5 +1,6 @@
 import '@shopify/shopify-api/adapters/node';
-import { shopifyApi, ApiVersion } from '@shopify/shopify-api';
+import { shopifyApi, ApiVersion, Session } from '@shopify/shopify-api';
+import { Redis } from '@upstash/redis';
 import { createServer } from 'node:http';
 
 const shopify = shopifyApi({
@@ -11,7 +12,27 @@ const shopify = shopifyApi({
   isEmbeddedApp: true,
 });
 
-const sessions = new Map();
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
+function sessionFromStored(stored) {
+  if (stored == null) return undefined;
+  const o = typeof stored === 'string' ? JSON.parse(stored) : stored;
+  if (o.expires) o.expires = new Date(o.expires);
+  if (o.refreshTokenExpires) o.refreshTokenExpires = new Date(o.refreshTokenExpires);
+  return new Session(o);
+}
+
+async function loadSession(shop) {
+  const raw = await redis.get(`minishopi:session:${ shop }`);
+  return sessionFromStored(raw);
+}
+
+async function saveSession(session) {
+  await redis.set(`minishopi:session:${ session.shop }`, JSON.stringify(session.toObject()));
+}
 
 const html = `<!DOCTYPE html>
 <html>
@@ -30,7 +51,7 @@ createServer(async (req, res) => {
 
   if (url.pathname === '/auth/callback') {
     const { session } = await shopify.auth.callback({ rawRequest: req, rawResponse: res });
-    sessions.set(session.shop, session);
+    await saveSession(session);
     res.writeHead(302, { Location: `/?shop=${ session.shop }&host=${ url.searchParams.get('host') }` });
     res.end();
     return;
@@ -38,7 +59,8 @@ createServer(async (req, res) => {
 
   if (!shop) { res.writeHead(400); res.end('Missing shop'); return; }
 
-  if (!sessions.has(shop)) {
+  const existing = await loadSession(shop);
+  if (!existing?.accessToken) {
     if (req.headers['sec-fetch-dest'] === 'iframe') {
       const absolute = new URL(req.url, `https://${ req.headers.host }`);
       res.writeHead(200, { 'Content-Type': 'text/html' });

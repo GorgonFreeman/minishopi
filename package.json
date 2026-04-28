@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@shopify/shopify-api": "^13.0.0",
+    "@upstash/redis": "^1.37.0",
     "cloudflared": "^0.7.1"
   }
 }
