@@ -49,4 +49,5 @@ The most minimal Node Shopify embedded app I could manage. Single file (`server.
 ## Notes
 
 - Sessions live in a `Map` and vanish on restart — re-install if that happens.
+- **Embedded iframe**: Shopify loads your app in an iframe first. OAuth cookies from `@shopify/shopify-api` use `SameSite=Lax`, which browsers often block in that cross-site iframe. Before starting OAuth we detect `Sec-Fetch-Dest: iframe` and redirect the **top window** to the same URL so `auth.begin` runs in a first-party tab and the cookie survives through the Shopify redirect back to `/auth/callback`.
 - All routes are inline in `server.js`: `/auth/callback` for OAuth, everything else expects `?shop=` and either kicks off OAuth or serves the homepage.

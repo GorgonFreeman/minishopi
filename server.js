@@ -39,6 +39,12 @@ createServer(async (req, res) => {
   if (!shop) { res.writeHead(400); res.end('Missing shop'); return; }
 
   if (!sessions.has(shop)) {
+    if (req.headers['sec-fetch-dest'] === 'iframe') {
+      const absolute = new URL(req.url, `https://${ req.headers.host }`);
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(`<!DOCTYPE html><script>window.top.location.href=${ JSON.stringify(absolute.href) }</script>`);
+      return;
+    }
     await shopify.auth.begin({ shop, callbackPath: '/auth/callback', isOnline: false, rawRequest: req, rawResponse: res });
     return;
   }
