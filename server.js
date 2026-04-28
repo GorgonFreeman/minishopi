@@ -12,10 +12,15 @@ const shopify = shopifyApi({
   isEmbeddedApp: true,
 });
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+const useRedis = Boolean(process.env.UPSTASH_REDIS_REST_URL?.trim() && process.env.UPSTASH_REDIS_REST_TOKEN?.trim());
+const redis = useRedis
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
+
+const memorySessions = new Map();
 
 function sessionFromStored(stored) {
   if (stored == null) return undefined;
@@ -26,12 +31,19 @@ function sessionFromStored(stored) {
 }
 
 async function loadSession(shop) {
-  const raw = await redis.get(`minishopi:session:${ shop }`);
-  return sessionFromStored(raw);
+  if (redis) {
+    const raw = await redis.get(`minishopi:session:${ shop }`);
+    return sessionFromStored(raw);
+  }
+  return memorySessions.get(shop);
 }
 
 async function saveSession(session) {
-  await redis.set(`minishopi:session:${ session.shop }`, JSON.stringify(session.toObject()));
+  if (redis) {
+    await redis.set(`minishopi:session:${ session.shop }`, JSON.stringify(session.toObject()));
+    return;
+  }
+  memorySessions.set(session.shop, session);
 }
 
 const html = `<!DOCTYPE html>
