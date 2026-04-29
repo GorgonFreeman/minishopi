@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
+// Admin UI extensions are limited to 64 KB scripts; Preact fits, React + react-dom does not.
+import { render } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 
 export default async () => {
-  const root = createRoot(document.body);
-  root.render(<Extension />);
+  render(<Extension />, document.body);
 
   function Extension() {
     const { close, data, i18n } = shopify;
