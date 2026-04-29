@@ -1,6 +1,9 @@
 /**
  * Runs `shopify app dev` with `--tunnel-url` from HOST in `.env`.
  *
+ * Shopify CLI expects `--tunnel-url` as `https://<tunnel-host>:<local-port>` where
+ * `<local-port>` is the port your tunnel forwards to (same as PORT / npm run dev).
+ *
  * Do not run this under `concurrently` with other tools: the Shopify CLI needs
  * a normal TTY for login and prompts. Run `npm run shopify:dev` in its own
  * terminal alongside `npm run dev` (and `npm run tunnel` when you use cloudflared).
@@ -34,11 +37,24 @@ try {
   process.exit(1);
 }
 
-let host = process.env.HOST?.replace(/\/$/, '');
+let host = process.env.HOST?.trim().replace(/\/+$/, '');
 if (!host) {
   console.error('scripts/shopify-dev.mjs: set HOST in .env (public HTTPS URL of your tunnel).');
   process.exit(1);
 }
+
+const portRaw = Number(process.env.PORT, 10);
+const localPort = Number.isFinite(portRaw) && portRaw > 0 ? portRaw : 3121;
+
+/** @see https://shopify.dev/docs/api/shopify-cli/app/app-dev — tunnel-url includes local port */
+function tunnelUrlForShopifyCli(origin, portNum) {
+  const normalized = origin.startsWith('http') ? origin : `https://${ origin }`;
+  const u = new URL(normalized);
+  u.port = String(portNum);
+  return u.href.replace(/\/+$/, '');
+}
+
+const tunnelArg = tunnelUrlForShopifyCli(host, localPort);
 
 const child = spawn(
   'npx',
@@ -47,9 +63,9 @@ const child = spawn(
     '@shopify/cli@latest',
     'app',
     'dev',
-    `--tunnel-url=${ host }`,
+    `--tunnel-url=${ tunnelArg }`,
   ],
-  { stdio: 'inherit', shell: true, cwd: root },
+  { stdio: 'inherit', cwd: root, shell: false },
 );
 
 child.on('exit', (code) => process.exit(code ?? 0));
