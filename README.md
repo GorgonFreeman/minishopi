@@ -60,18 +60,24 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
    npm run dev
    ```
 
-7. **Install on your dev store** from the Partners app page → *Test your app* → pick the dev store. You should see the Polaris shell with **It's minishopi c:**.
+7. **Install on your dev store** from the Partners app page → *Test your app* → pick the dev store. You should land on **`/pages/home`** (redirect from `/`) with nav links from **`pages/`** autodiscovery.
 
 ## Frontend (Polaris + Vite)
 
-- Source lives under **`src/`** (`App.jsx`, `main.jsx`). Root **`index.html`** is the Vite entry.
-- **`vite.config.js`** only enables `@vitejs/plugin-react` and writes output to **`dist/`**.
-- **`server.js`** serves **`dist/index.html`** for authenticated embed requests (injecting App Bridge + API key meta) and **`/assets/*`** for hashed JS/CSS from the build.
-- **Development**: run **`npm run dev`** — it runs one production build, starts **`server.js`**, and keeps **`vite build --watch`** running so **`dist/`** updates when you edit **`src/`** or **`index.html`**. Refresh the embedded app after each rebuild (Ctrl+C stops both processes).
-- **Production-style run** (single build): **`npm run build`** then **`npm start`**.
+- Root **`index.html`** is the Vite entry; **`src/`** holds **`main.jsx`** (browser **`BrowserRouter`**), **`App.jsx`** (Polaris **`AppProvider`**, **`Routes`**), and route discovery via **`import.meta.glob('../pages/**/*.jsx')`** → paths **`/pages/<slug>`** where `<slug>` matches **`pages/<slug>.jsx`** at repo root.
+- Add a Polaris screen by adding **`pages/foo.jsx`** (default export); rebuild (`npm run build` or watch). Nested paths like **`pages/reports/sales.jsx`** become **`/pages/reports/sales`**.
+- **`server.js`** serves **`dist/index.html`** for authenticated GETs (any path used by the SPA, not only `/`), **`/assets/*`**, autoloaded **`/api/<handler>`** from **`api/<handler>.js`**, plus **`/auth/callback`**.
+- **Development**: run **`npm run dev`** — production build once, then **`vite build --watch`** plus **`npm start`**. Refresh after rebuild when **`src/`**, **`pages/`**, or **`index.html`** change (Ctrl+C stops both).
+- **Production-style run**: **`npm run build`** then **`npm start`**.
+
+## API handlers (`api/`)
+
+- One file **`api/getCustomer.js`** → **`GET /api/getCustomer?shop=…`** (no **`.js`** in the URL).
+- Export **`export default async function (req, res, { shop, session }) { … }`**. Requests must include **`shop`**; the handler runs only if an offline session exists (same rule as HTML).
+- **Handlers load once at process start** — add or rename a file under **`api/`** and restart **`server.js`** (e.g. stop and re-run **`npm run dev`** or **`npm start`**).
 
 ## Notes
 
 - Offline OAuth sessions: **Upstash** under `minishopi:session:<shop>` when both Upstash env vars are set; otherwise a **process-local `Map`** (same behavior as before Redis — wiped on restart).
 - **Embedded iframe**: Shopify loads your app in an iframe first. OAuth cookies from `@shopify/shopify-api` use `SameSite=Lax`, which browsers often block in that cross-site iframe. Before starting OAuth we detect `Sec-Fetch-Dest: iframe` and redirect the **top window** to the same URL so `auth.begin` runs in a first-party tab and the cookie survives through the Shopify redirect back to `/auth/callback`.
-- All HTTP routes live in **`server.js`**: `/auth/callback`, `/assets/*`, and authenticated `/` with `?shop=`.
+- All HTTP routes live in **`server.js`**: **`/assets/*`**, **`/api/*`**, **`/auth/callback`**, **`/health`**, and authenticated SPA **`GET`**s ( **`?shop=`** required except **`/health`**).

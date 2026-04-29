@@ -1,8 +1,8 @@
 import '@shopify/shopify-api/adapters/node';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { dirname, extname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { basename, dirname, extname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { shopifyApi, ApiVersion, Session } from '@shopify/shopify-api';
 import { Redis } from '@upstash/redis';
 
@@ -20,6 +20,23 @@ const mimeByExt = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
 };
+
+async function loadApiHandlers() {
+  const map = new Map();
+  const apiDir = resolve(__dirname, 'api');
+  if (!existsSync(apiDir)) return map;
+
+  for (const file of readdirSync(apiDir).filter((f) => f.endsWith('.js'))) {
+    const name = basename(file, '.js');
+    const href = pathToFileURL(join(apiDir, file)).href;
+    const mod = await import(href);
+    if (typeof mod.default !== 'function') continue;
+    map.set(name, mod.default);
+  }
+  return map;
+}
+
+const apiHandlers = await loadApiHandlers();
 
 function polarisShellHtml() {
   const indexPath = resolve(distDir, 'index.html');
@@ -97,9 +114,54 @@ async function saveSession(session) {
 
 createServer(async (req, res) => {
   const url = new URL(req.url, `https://${ req.headers.host }`);
-  const shop = url.searchParams.get('shop');
+
+  if (url.pathname === '/health') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('ok');
+    return;
+  }
 
   if (serveDistAsset(res, url.pathname)) return;
+
+  if (url.pathname.startsWith('/api/')) {
+    const apiMatch = url.pathname.match(/^\/api\/([^/]+)$/);
+    if (!apiMatch) {
+      res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: 'Not found' }));
+      return;
+    }
+    const handlerName = apiMatch[1];
+    const shop = url.searchParams.get('shop');
+    if (!shop) {
+      res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: 'Missing shop' }));
+      return;
+    }
+    const existing = await loadSession(shop);
+    if (!existing?.accessToken) {
+      res.writeHead(401, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
+    }
+    const handler = apiHandlers.get(handlerName);
+    if (!handler) {
+      res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: 'Not found' }));
+      return;
+    }
+    try {
+      await handler(req, res, { shop, session: existing });
+    } catch (err) {
+      console.error(err);
+      if (!res.writableEnded) {
+        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: 'Internal error' }));
+      }
+    }
+    return;
+  }
+
+  const shop = url.searchParams.get('shop');
 
   if (url.pathname === '/auth/callback') {
     const { session } = await shopify.auth.callback({ rawRequest: req, rawResponse: res });
@@ -120,6 +182,12 @@ createServer(async (req, res) => {
       return;
     }
     await shopify.auth.begin({ shop, callbackPath: '/auth/callback', isOnline: false, rawRequest: req, rawResponse: res });
+    return;
+  }
+
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    res.writeHead(405);
+    res.end();
     return;
   }
 
