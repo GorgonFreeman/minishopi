@@ -76,6 +76,10 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
 - Export **`export default async function (req, res, { shop, session }) { … }`**. Requests must include **`shop`**; the handler runs only if an offline session exists (same rule as HTML).
 - **Handlers load once at process start** — add or rename a file under **`api/`** and restart **`server.js`** (e.g. stop and re-run **`npm run dev`** or **`npm start`**).
 
+## Hosting on Google Cloud
+
+Short checklist: **[docs/hosting-google-cloud.md](docs/hosting-google-cloud.md)** (`gcloud run deploy --source .`, env vars, Shopify URLs). **`GET /health`** for probes.
+
 ## Notes
 
 - Offline OAuth sessions: **Upstash** under `minishopi:session:<shop>` when both Upstash env vars are set; otherwise a **process-local `Map`** (same behavior as before Redis — wiped on restart).
