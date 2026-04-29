@@ -1,8 +1,9 @@
-import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 
 export default async () => {
-  render(<Extension />, document.body);
+  const root = createRoot(document.body);
+  root.render(<Extension />);
 
   function Extension() {
     const { close, data, i18n } = shopify;
@@ -14,17 +15,50 @@ export default async () => {
         setLine(i18n.translate('no-product'));
         return;
       }
-      shopify
-        .query(`query ($id: ID!) { product(id: $id) { title } }`, {
-          variables: { id },
-        })
-        .then(({ data: gql, errors }) => {
-          if (errors?.length) throw new Error();
-          const title = gql?.product?.title ?? '';
+
+      let cancelled = false;
+
+      async function load() {
+        try {
+          const response = await fetch('shopify:admin/api/graphql.json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: `
+                query ProductTitle($id: ID!) {
+                  product(id: $id) {
+                    title
+                  }
+                }
+              `,
+              variables: { id },
+            }),
+          });
+
+          const result = await response.json();
+          if (cancelled) return;
+
+          if (result.errors?.length) {
+            console.log('productEchoGraphqlErrors', result.errors);
+            setLine(i18n.translate('load-error'));
+            return;
+          }
+
+          const title = result.data?.product?.title ?? '';
           setLine(i18n.translate('echo-with-title', { title }));
-        })
-        .catch(() => setLine(i18n.translate('load-error')));
-    }, [ id, i18n ]);
+        } catch (err) {
+          if (cancelled) return;
+          console.log('productEchoFetchError', err);
+          setLine(i18n.translate('load-error'));
+        }
+      }
+
+      load();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [ id ]);
 
     return (
       <s-admin-action heading={ i18n.translate('name') }>
