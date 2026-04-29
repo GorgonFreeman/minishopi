@@ -11,9 +11,12 @@
     "build:watch": "vite build --watch",
     "start": "node --env-file=.env server.js",
     "dev": "vite build && concurrently -k \"npm run build:watch\" \"npm start\"",
+    "dev:auto": "node scripts/dev-auto.mjs",
+    "dev:tabs": "node scripts/dev-tabs.mjs",
+    "dev:full": "npm run dev:tabs",
     "shopify:dev": "node scripts/shopify-dev.mjs",
-    "dev:full": "node scripts/dev-tabs.mjs",
-    "tunnel": "cloudflared tunnel --url http://localhost:3121",
+    "tunnel": "node scripts/tunnel-with-sync.mjs",
+    "tunnel:raw": "cloudflared tunnel --url http://localhost:3121",
     "shopify:build": "npx --yes @shopify/cli@latest app build"
   },
   "dependencies": {

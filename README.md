@@ -5,7 +5,7 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
 ## Requirements
 
 - Node 22+
-- A public HTTPS URL pointing at your local machine (provided via `npm run tunnel`, which uses Cloudflare's `cloudflared`)
+- A public HTTPS URL pointing at your local machine — **`npm run tunnel`** runs Cloudflare **`cloudflared`** and writes that URL into **`.env`** (`HOST`) and **`shopify.app.toml`** (`application_url`, `redirect_urls`) when it appears (see **`npm run propagate-tunnel`** if you paste a URL manually)
 - A Shopify Partner account + a development store
 - Optionally an [Upstash](https://upstash.com/) Redis database — copy **REST URL** and **REST TOKEN** into `.env`. If either is missing, sessions stay **in-memory only** (lost on restart).
 
@@ -23,7 +23,7 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
    npm run tunnel
    ```
 
-   Copy the HTTPS URL it prints (e.g. `https://something.trycloudflare.com`).
+   Leave it running. When cloudflared prints the public URL, it is copied into **`HOST`** (`.env`) and **`shopify.app.toml`** automatically. On first setup you still paste that same URL into **Partners → App URL / redirection URLs** if they do not match yet (or rely on Shopify CLI dev URL sync when using **`npm run shopify:dev`**).
 
 3. **Create the app in Shopify Partners**
    - Go to https://partners.shopify.com → Apps → Create app → Create app manually
@@ -37,7 +37,7 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
    cp .env.example .env
    ```
 
-   Fill in `SHOPIFY_API_KEY` (Client ID), `SHOPIFY_API_SECRET` (Client secret), and `HOST` (your tunnel URL). Add `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` from the Upstash console if you want Redis-backed sessions; omit them to use in-memory storage only. `SCOPES` is pre-populated with a wide set; trim if you like.
+   Fill in `SHOPIFY_API_KEY` (Client ID) and `SHOPIFY_API_SECRET` (Client secret). **`HOST`** is set automatically when you use **`npm run tunnel`** (or set it yourself / run **`npm run propagate-tunnel -- https://….trycloudflare.com`**). Add `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` from the Upstash console if you want Redis-backed sessions; omit them to use in-memory storage only. `SCOPES` is pre-populated with a wide set; trim if you like.
 
 5. **Build the Polaris UI** (generates `dist/` — required before `npm start`)
 
@@ -67,7 +67,7 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
 - Root **`index.html`** is the Vite entry; **`src/`** holds **`main.jsx`** (browser **`BrowserRouter`**), **`App.jsx`** (Polaris **`AppProvider`**, **`Routes`**), and route discovery via **`import.meta.glob('../pages/**/*.jsx')`** → paths **`/pages/<slug>`** where `<slug>` matches **`pages/<slug>.jsx`** at repo root.
 - Add a Polaris screen by adding **`pages/foo.jsx`** (default export); rebuild (`npm run build` or watch). Nested paths like **`pages/reports/sales.jsx`** become **`/pages/reports/sales`**.
 - **`server.js`** serves **`dist/index.html`** for authenticated GETs (any path used by the SPA, not only `/`), **`/assets/*`**, autoloaded **`/api/<handler>`** from **`api/<handler>.js`**, plus **`/auth/callback`**.
-- **Development**: run **`npm run dev`** — production build once, then **`vite build --watch`** plus **`npm start`**. Refresh after rebuild when **`src/`**, **`pages/`**, or **`index.html`** change (Ctrl+C stops both).
+- **Development**: run **`npm run dev`** — production build once, then **`vite build --watch`** plus **`npm start`**. Refresh after rebuild when **`src/`**, **`pages/`**, or **`index.html`** change (Ctrl+C stops both). **`npm run dev:auto`** starts **`npm run tunnel`** (sync URL → `.env` / **`shopify.app.toml`**) then **`npm run dev`**. **`npm run dev:tabs`** keeps the tunnel in the current terminal and opens **`npm run dev`** + **`npm run shopify:dev`** in new tabs (macOS **`ttab`**).
 - **Production-style run**: **`npm run build`** then **`npm start`**.
 
 ## API handlers (`api/`)
