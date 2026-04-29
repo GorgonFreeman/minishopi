@@ -1,0 +1,11 @@
+api_version = "2025-10"
+
+[[extensions]]
+name = "t:name"
+handle = "product-echo"
+uid = "235dbee0-16ff-41a6-9e44-301d8131f72a"
+type = "ui_extension"
+
+[[extensions.targeting]]
+module = "./src/ProductNameEcho.jsx"
+target = "admin.product-details.action.render"

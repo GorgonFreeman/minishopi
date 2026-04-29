@@ -11,7 +11,8 @@
     "build:watch": "vite build --watch",
     "start": "node --env-file=.env server.js",
     "dev": "vite build && concurrently -k \"npm run build:watch\" \"npm start\"",
-    "tunnel": "cloudflared tunnel --url http://localhost:3121"
+    "tunnel": "cloudflared tunnel --url http://localhost:3121",
+    "shopify:build": "npx --yes @shopify/cli@latest app build"
   },
   "dependencies": {
     "@shopify/polaris": "^13.9.5",

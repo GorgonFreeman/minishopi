@@ -1,0 +1,8 @@
+{
+  "name": "Echo product name",
+  "loading": "Loading…",
+  "no-product": "No product in context.",
+  "load-error": "Could not load product.",
+  "done": "Done",
+  "echo-with-title": "Product name: {{title}}"
+}
