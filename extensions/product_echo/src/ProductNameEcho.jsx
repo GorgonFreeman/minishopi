@@ -1,3 +1,4 @@
+/** @jsxImportSource preact */
 // Admin UI extensions are limited to 64 KB scripts; Preact fits, React + react-dom does not.
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
