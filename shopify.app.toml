@@ -2,8 +2,8 @@
 # Set `application_url` and `redirect_urls` to your public tunnel (same as HOST in `.env`).
 # See https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = 'minishopi'
-handle = 'minishopi'
+name = 'kitsuchan'
+handle = 'kitsuchan'
 
 client_id = '9714f468916471a3d6d6cb7b4fa0e777'
 

@@ -7,7 +7,7 @@ You only need: **build the app → run `node server.js` in a container → set t
 From the repo root (uses the **`Dockerfile`**):
 
 ```bash
-gcloud run deploy minishopi --source . --region us-central1 --allow-unauthenticated
+gcloud run deploy kitsuchan --source . --region us-central1 --allow-unauthenticated
 ```
 
 After deploy, open **Cloud Run → your service → Edit & deploy new revision → Variables**. Set **`SHOPIFY_API_KEY`**, **`SHOPIFY_API_SECRET`**, **`SCOPES`** (comma-separated), **`UPSTASH_*`** if you use Redis, and **`HOST`** to the service URL shown at the top (HTTPS origin, **no trailing slash** — same value Partners uses for the app).

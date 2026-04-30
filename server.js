@@ -98,7 +98,7 @@ function sessionFromStored(stored) {
 
 async function loadSession(shop) {
   if (redis) {
-    const raw = await redis.get(`minishopi:session:${ shop }`);
+    const raw = await redis.get(`kitsuchan:session:${ shop }`);
     return sessionFromStored(raw);
   }
   return memorySessions.get(shop);
@@ -106,7 +106,7 @@ async function loadSession(shop) {
 
 async function saveSession(session) {
   if (redis) {
-    await redis.set(`minishopi:session:${ session.shop }`, JSON.stringify(session.toObject()));
+    await redis.set(`kitsuchan:session:${ session.shop }`, JSON.stringify(session.toObject()));
     return;
   }
   memorySessions.set(session.shop, session);

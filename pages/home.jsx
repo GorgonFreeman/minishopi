@@ -21,7 +21,7 @@ export default function HomePage() {
       <Card>
         <BlockStack gap="400">
           <Text variant="bodyMd" as="p">
-            It's minishopi boi c:
+            It's kitsuchan boi c:
           </Text>
           <Text variant="bodySm" tone="subdued" as="pre">
             { apiPayload ? JSON.stringify(apiPayload, null, 2) : '…' }

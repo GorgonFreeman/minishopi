@@ -1,4 +1,4 @@
-# minishopi
+# kitsuchan
 
 Small Shopify embedded app: **`server.js`** handles OAuth and serves the built UI; **`src/`** is a React app bundled with **Vite** (Polaris components need React — Vite keeps the config small and readable compared with hand-rolled Rollup or Webpack).
 
@@ -82,6 +82,6 @@ Short checklist: **[docs/hosting-google-cloud.md](docs/hosting-google-cloud.md)*
 
 ## Notes
 
-- Offline OAuth sessions: **Upstash** under `minishopi:session:<shop>` when both Upstash env vars are set; otherwise a **process-local `Map`** (same behavior as before Redis — wiped on restart).
+- Offline OAuth sessions: **Upstash** under `kitsuchan:session:<shop>` when both Upstash env vars are set; otherwise a **process-local `Map`** (same behavior as before Redis — wiped on restart).
 - **Embedded iframe**: Shopify loads your app in an iframe first. OAuth cookies from `@shopify/shopify-api` use `SameSite=Lax`, which browsers often block in that cross-site iframe. Before starting OAuth we detect `Sec-Fetch-Dest: iframe` and redirect the **top window** to the same URL so `auth.begin` runs in a first-party tab and the cookie survives through the Shopify redirect back to `/auth/callback`.
 - All HTTP routes live in **`server.js`**: **`/assets/*`**, **`/api/*`**, **`/auth/callback`**, **`/health`**, and authenticated SPA **`GET`**s ( **`?shop=`** required except **`/health`**).

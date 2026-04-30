@@ -3,8 +3,8 @@
 # `client_id` is the Partner Dashboard “Client ID” (same value as SHOPIFY_API_KEY).
 # https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = 'minishopi'
-handle = 'minishopi'
+name = 'kitsuchan'
+handle = 'kitsuchan'
 
 client_id = 'REPLACE_WITH_CLIENT_ID_FROM_PARTNERS'
 

@@ -50,7 +50,7 @@ function Shell() {
       <Box paddingBlockEnd="400">
         <InlineStack gap="400" align="start" blockAlign="center">
           <Text variant="headingMd" as="span">
-            minishopi
+            kitsuchan
           </Text>
           { entries.map(({ slug }) => (
             <Link

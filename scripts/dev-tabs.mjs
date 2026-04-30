@@ -49,9 +49,9 @@ const tunnelProc = await runTunnelUntilPropagated(port, root);
 
 console.log('Opening dev + shopify tabs. Leave this window open — the tunnel runs here.\n');
 
-await spawnTab('minishopi dev', 'dev');
+await spawnTab('kitsuchan dev', 'dev');
 await delay(500);
-await spawnTab('minishopi shopify', 'shopify:dev');
+await spawnTab('kitsuchan shopify', 'shopify:dev');
 
 console.log('\nDone. Ctrl+C here stops the tunnel.\n');
 
