@@ -1,10 +1,10 @@
-import '@shopify/shopify-api/adapters/node';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { basename, dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { shopifyApi, ApiVersion, Session } from '@shopify/shopify-api';
+import { Session } from '@shopify/shopify-api';
 import { Redis } from '@upstash/redis';
+import { shopify } from './shopify-server.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, 'dist');
@@ -68,15 +68,6 @@ function serveDistAsset(res, pathname) {
   res.end(readFileSync(filePath));
   return true;
 }
-
-const shopify = shopifyApi({
-  apiKey: process.env.SHOPIFY_API_KEY,
-  apiSecretKey: process.env.SHOPIFY_API_SECRET,
-  scopes: process.env.SCOPES.split(','),
-  hostName: process.env.HOST.replace(/^https?:\/\//, ''),
-  apiVersion: ApiVersion.April26,
-  isEmbeddedApp: true,
-});
 
 const useRedis = Boolean(process.env.UPSTASH_REDIS_REST_URL?.trim() && process.env.UPSTASH_REDIS_REST_TOKEN?.trim());
 const redis = useRedis
@@ -171,7 +162,11 @@ createServer(async (req, res) => {
     return;
   }
 
-  if (!shop) { res.writeHead(400); res.end('Missing shop'); return; }
+  if (!shop) {
+    res.writeHead(400);
+    res.end('Missing shop');
+    return;
+  }
 
   const existing = await loadSession(shop);
   if (!existing?.accessToken) {

@@ -7,7 +7,7 @@ handle = 'kitsuchan'
 
 client_id = 'ab540b86ceb52c60bd693d49ad5a3520'
 
-application_url = 'https://witness-cameron-aid-dock.trycloudflare.com/'
+application_url = 'https://hosted-proudly-tea-smart.trycloudflare.com/'
 embedded = true
 
 [build]
@@ -15,11 +15,11 @@ include_config_on_deploy = true
 automatically_update_urls_on_dev = true
 
 [access_scopes]
-scopes = 'read_products,write_products'
+scopes = 'read_products,write_products,read_metaobjects'
 
 [auth]
 redirect_urls = [
-  'https://witness-cameron-aid-dock.trycloudflare.com/auth/callback',
+  'https://hosted-proudly-tea-smart.trycloudflare.com/auth/callback',
 ]
 
 [pos]
@@ -31,6 +31,11 @@ api_version = '2026-04'
 [[webhooks.subscriptions]]
 topics = ['app/uninstalled']
 uri = '/webhooks/app/uninstalled'
+
+
+
+
+
 
 
 
