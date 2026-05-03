@@ -1,7 +1,7 @@
-import { AppProvider, Box, InlineStack, Text } from '@shopify/polaris';
+import { NavMenu } from '@shopify/app-bridge-react';
+import { AppProvider, Box, Text } from '@shopify/polaris';
 import polarisEn from '@shopify/polaris/locales/en.json';
 import {
-  Link,
   Navigate,
   Outlet,
   Route,
@@ -44,26 +44,25 @@ function Shell() {
   const entries = slugEntries();
   const [ searchParams ] = useSearchParams();
   const qs = searchParams.toString();
+  const q = qs ? `?${ qs }` : '';
 
   return (
     <>
+      <NavMenu>
+        { entries.map(({ slug }) => (
+          <a
+            key={ slug }
+            href={ `/pages/${ slug }${ q }` }
+            rel={ slug === 'home' ? 'home' : undefined }
+          >
+            { humanizeSlug(slug) }
+          </a>
+        )) }
+      </NavMenu>
       <Box paddingBlockEnd="400">
-        <InlineStack gap="400" align="start" blockAlign="center">
-          <Text variant="headingMd" as="span">
-            kitsuchan
-          </Text>
-          { entries.map(({ slug }) => (
-            <Link
-              key={ slug }
-              to={ { pathname: `/pages/${ slug }`, search: qs ? `?${ qs }` : '' } }
-              style={ { textDecoration: 'none' } }
-            >
-              <Text variant="bodyMd" as="span">
-                { humanizeSlug(slug) }
-              </Text>
-            </Link>
-          )) }
-        </InlineStack>
+        <Text variant="headingMd" as="span">
+          kitsuchan
+        </Text>
       </Box>
       <Outlet />
     </>

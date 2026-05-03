@@ -7,7 +7,7 @@ handle = 'kitsuchan'
 
 client_id = '9714f468916471a3d6d6cb7b4fa0e777'
 
-application_url = 'https://blake-ecological-civilian-band.trycloudflare.com/'
+application_url = 'https://witness-cameron-aid-dock.trycloudflare.com/'
 embedded = true
 
 [build]
@@ -19,7 +19,7 @@ scopes = 'read_products,write_products'
 
 [auth]
 redirect_urls = [
-  'https://blake-ecological-civilian-band.trycloudflare.com/auth/callback',
+  'https://witness-cameron-aid-dock.trycloudflare.com/auth/callback',
 ]
 
 [pos]
@@ -31,5 +31,6 @@ api_version = '2026-04'
 [[webhooks.subscriptions]]
 topics = ['app/uninstalled']
 uri = '/webhooks/app/uninstalled'
+
 
 

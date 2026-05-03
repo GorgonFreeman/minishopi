@@ -20,6 +20,7 @@
     "shopify:build": "npx --yes @shopify/cli@latest app build"
   },
   "dependencies": {
+    "@shopify/app-bridge-react": "^4.2.10",
     "@shopify/polaris": "^13.9.5",
     "@shopify/shopify-api": "^13.0.0",
     "@upstash/redis": "^1.37.0",
