@@ -5,7 +5,7 @@
 name = 'kitsuchan'
 handle = 'kitsuchan'
 
-client_id = '9714f468916471a3d6d6cb7b4fa0e777'
+client_id = 'ab540b86ceb52c60bd693d49ad5a3520'
 
 application_url = 'https://witness-cameron-aid-dock.trycloudflare.com/'
 embedded = true
