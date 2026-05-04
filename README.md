@@ -78,7 +78,7 @@ Small Shopify embedded app: **`server.js`** handles OAuth and serves the built U
 
 ## Hosting on Google Cloud
 
-Short checklist: **[docs/hosting-google-cloud.md](docs/hosting-google-cloud.md)** (`gcloud run deploy --source .`, env vars, Shopify URLs). **`GET /health`** for probes.
+Short checklist: **[docs/hosting-google-cloud.md](docs/hosting-google-cloud.md)** (`gcloud run deploy --source .`, **`shopify.app.live.toml`**, **`shopify app deploy -c live`**). **`GET /health`** for probes.
 
 ## Notes
 
