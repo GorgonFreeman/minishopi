@@ -26,7 +26,7 @@ async function loadApiHandlers() {
   const apiDir = resolve(__dirname, 'api');
   if (!existsSync(apiDir)) return map;
 
-  for (const file of readdirSync(apiDir).filter((f) => f.endsWith('.js'))) {
+  for (const file of readdirSync(apiDir).filter((f) => f.endsWith('.js') && !f.startsWith('_'))) {
     const name = basename(file, '.js');
     const href = pathToFileURL(join(apiDir, file)).href;
     const mod = await import(href);

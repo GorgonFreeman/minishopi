@@ -1,6 +1,6 @@
 import { LitElement, html, nothing } from 'lit';
 
-const pageModules = import.meta.glob('../pages/**/*.js', { eager: true });
+const pageModules = import.meta.glob([ '../pages/**/*.js', '!../pages/**/_*.js' ], { eager: true });
 
 const slugs = Object.keys(pageModules)
   .map((path) => path.match(/\/pages\/(.+)\.js$/u)?.[ 1 ])

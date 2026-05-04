@@ -11,7 +11,8 @@
     "start": "node --env-file=.env server.js",
     "web:dev": "vite build && concurrently -k \"vite build --watch\" \"node server.js\"",
     "dev": "shopify app dev",
-    "deploy": "node --env-file=.env scripts/deploy.mjs"
+    "deploy": "node --env-file=.env scripts/deploy.mjs",
+    "new": "node scripts/new.mjs"
   },
   "dependencies": {
     "@shopify/shopify-api": "^13.0.0",
