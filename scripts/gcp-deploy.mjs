@@ -7,10 +7,9 @@
  *   **`https://SERVICE-PROJECT_NUMBER.REGION.run.app`**) so the container passes startup (Shopify API
  *   requires **`hostName`**). Still runs **`gcloud run services update`** after deploy to apply
  *   **`GCP_PUBLIC_APP_URL`** when set.
- * - Writes `shopify.app.live.toml` from `shopify.app.toml` with that public URL for
- *   `shopify app deploy -c live` (Partners iframe + redirect URLs).
- * - Records `HOSTED_URL` in `.env` (actual *.run.app).
- * - Optional: `SHOPIFY_APP_DEPLOY=1` runs `shopify app deploy -c live --allow-updates`.
+ * - Writes `shopify.app.live.toml` from `shopify.app.toml` with that public URL, then runs
+ *   `shopify app deploy -c live --allow-updates` so Partners (App URL + redirects) matches Cloud Run.
+ * - Records `HOSTED_URL` in `.env` (canonical URL from `gcloud run services describe`).
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -162,41 +161,23 @@ if (existsSync(envPath)) {
 
 try {
   const livePath = writeShopifyAppLiveToml(root, publicAppUrl);
-  console.log(`Wrote ${ livePath } — run: npx @shopify/cli app deploy -c live --allow-updates`);
+  console.log(`Wrote ${ livePath }`);
 } catch (err) {
   console.error('writeShopifyAppLiveToml failed:', err.message);
   process.exit(1);
 }
 
-if (shopifyAppDeployEnabled()) {
-  console.log('Running shopify app deploy -c live (SHOPIFY_APP_DEPLOY=1)…');
-  const s = spawnSync(
-    'npx',
-    [
-      '--yes',
-      '@shopify/cli@latest',
-      'app',
-      'deploy',
-      '-c',
-      'live',
-      '--allow-updates',
-    ],
-    { stdio: 'inherit', cwd: root, shell: false },
-  );
-  if (s.status !== 0) {
-    console.error('shopify app deploy failed — fix auth or run it manually; Cloud Run is already updated.');
-    process.exit(s.status === null ? 1 : s.status);
-  }
-} else {
-  console.log('Tip: set SHOPIFY_APP_DEPLOY=1 in .env to push URLs to Shopify after each Cloud Run deploy.');
+const s = spawnSync(
+  'npx',
+  [ '--yes', '@shopify/cli@latest', 'app', 'deploy', '-c', 'live', '--allow-updates' ],
+  { stdio: 'inherit', cwd: root, shell: false },
+);
+if (s.status !== 0) {
+  console.error('shopify app deploy failed — Cloud Run is already updated.');
+  process.exit(s.status === null ? 1 : s.status);
 }
 
 process.exit(0);
-
-function shopifyAppDeployEnabled() {
-  const v = (process.env.SHOPIFY_APP_DEPLOY ?? '').trim().toLowerCase();
-  return v === '1' || v === 'true' || v === 'yes';
-}
 
 function readServiceName() {
   try {
@@ -227,7 +208,6 @@ function deployExcludeKeys() {
     'GCP_RUN_ENV_KEYS',
     'GCP_DEPLOY_ENV_EXCLUDE',
     'GCP_PUBLIC_APP_URL',
-    'SHOPIFY_APP_DEPLOY',
   ]);
   for (const k of (process.env.GCP_DEPLOY_ENV_EXCLUDE ?? '')
     .split(',')
