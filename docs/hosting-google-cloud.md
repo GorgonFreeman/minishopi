@@ -10,7 +10,7 @@ From the repo root, set **`GCP_PROJECT`** (and optionally **`GCP_REGION`**, **`G
 npm run deploy
 ```
 
-This runs **`gcloud run deploy`** with **`--source .`** (uses the **`Dockerfile`**). See **`.env.example`** for all **`GCP_*`** options (memory, CPU, **`GCP_RUN_ENV_KEYS`** to push selected vars to the revision).
+This runs **`gcloud run deploy`** with **`--source .`** (uses the **`Dockerfile`**). **`scripts/gcp-deploy.mjs`** reads **`.env`** and passes every key to the revision except **`PORT`** (local dev; the container uses **8080**) and deploy-only **`GCP_*`** settings. Comma-heavy values (e.g. **`SCOPES`**) use the same gcloud escaping pattern as **`bedrock`**’s **`_deploy_scripts/setEnvVarsGcloud.js`**. Optional **`GCP_DEPLOY_ENV_EXCLUDE`** lists extra keys to skip.
 
 Equivalent one-liner without npm:
 
@@ -18,7 +18,7 @@ Equivalent one-liner without npm:
 gcloud run deploy kitsuchan --source . --region us-central1 --allow-unauthenticated
 ```
 
-After deploy, open **Cloud Run → your service → Edit & deploy new revision → Variables**. Set **`SHOPIFY_API_KEY`**, **`SHOPIFY_API_SECRET`**, **`SCOPES`** (comma-separated), **`UPSTASH_*`** if you use Redis, and **`HOST`** to the service URL shown at the top (HTTPS origin, **no trailing slash** — same value Partners uses for the app).
+If you add new secrets after first deploy, put them in **`.env`** and run **`npm run deploy`** again, or edit **Variables** in the console. **`HOST`** in **`.env`** should match the public HTTPS origin (**no trailing slash**) — update it to your **`*.run.app`** (or custom domain) URL and redeploy so OAuth matches Partners.
 
 First revision: use any placeholder **`HOST`** (e.g. `https://placeholder.invalid`) so the process boots, then set **`HOST`** to the real **`https://….run.app`** URL and redeploy.
 

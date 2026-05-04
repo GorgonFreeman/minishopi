@@ -1,12 +1,17 @@
 #!/usr/bin/env node
 /**
  * Cloud Run deploy from repo root: `npm run deploy` (loads .env via package.json).
- * Required: GCP_PROJECT. Optional: GCP_REGION, GCP_SERVICE, scaling, and GCP_RUN_ENV_KEYS.
+ * Required: GCP_PROJECT. Optional: GCP_REGION, GCP_SERVICE, scaling.
+ * All keys from `.env` are passed to the revision via `--set-env-vars`, except deploy-only
+ * `GCP_*` knobs and `PORT` (Cloud Run + Dockerfile use 8080). Uses the same gcloud escaping
+ * rules as bedrock (`scripts/setEnvVarsGcloud.mjs`) so values like `SCOPES=a,b,c` work.
  */
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseEnvFile } from './parseEnvFile.mjs';
+import { formatSetEnvVarsForGcloud } from './setEnvVarsGcloud.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -51,19 +56,25 @@ for (const [ envKey, flag, transform ] of [
   }
 }
 
-const envKeys = (process.env.GCP_RUN_ENV_KEYS ?? '')
-  .split(',')
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-if (envKeys.length > 0) {
-  const pairs = [];
-  for (const key of envKeys) {
-    const val = process.env[ key ];
-    if (val === undefined) continue;
-    pairs.push(encodeEnvVarForGcloud(key, val));
+const envPath = join(root, '.env');
+if (existsSync(envPath)) {
+  const parsed = parseEnvFile(readFileSync(envPath, 'utf8'));
+  const exclude = deployExcludeKeys();
+  const parts = [];
+  for (const [ key, val ] of parsed) {
+    if (exclude.has(key)) continue;
+    if (val === '') continue;
+    parts.push(`${ key }=${ val }`);
   }
-  if (pairs.length > 0) args.push('--set-env-vars', pairs.join(','));
+  if (parts.length > 0) {
+    const combined = formatSetEnvVarsForGcloud(parts.join(','));
+    args.push('--set-env-vars', combined);
+    console.log(`Including ${ parts.length } variable(s) from .env in Cloud Run (deploy knobs and PORT omitted).`);
+  } else {
+    console.warn('No non-empty keys from .env to pass to Cloud Run (check .env and exclusions).');
+  }
+} else {
+  console.warn('.env not found — deploy proceeds without --set-env-vars from file.');
 }
 
 const pretty = `gcloud ${ args.map((a) => (/\s/.test(a) ? JSON.stringify(a) : a)).join(' ') }`;
@@ -82,8 +93,29 @@ function readServiceName() {
   return 'kitsuchan';
 }
 
-/** KEY=VALUE for gcloud --set-env-vars (commas in value → \, ). */
-function encodeEnvVarForGcloud(key, value) {
-  const enc = String(value).replace(/\\/g, '\\\\').replace(/,/g, '\\,');
-  return `${ key }=${ enc }`;
+/** Keys only used locally / by this script — never sent to the container. */
+function deployExcludeKeys() {
+  const s = new Set([
+    'PORT',
+    'GCP_PROJECT',
+    'GCP_REGION',
+    'GCP_SERVICE',
+    'GCP_ALLOW_UNAUTHENTICATED',
+    'GCP_MEMORY',
+    'GCP_CPU',
+    'GCP_MIN_INSTANCES',
+    'GCP_MAX_INSTANCES',
+    'GCP_TIMEOUT',
+    'GCP_CONCURRENCY',
+    'GCP_SERVICE_ACCOUNT',
+    'GCP_RUN_ENV_KEYS',
+    'GCP_DEPLOY_ENV_EXCLUDE',
+  ]);
+  for (const k of (process.env.GCP_DEPLOY_ENV_EXCLUDE ?? '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean)) {
+    s.add(k);
+  }
+  return s;
 }
