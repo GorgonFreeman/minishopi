@@ -12,8 +12,8 @@ npm run deploy
 
 This runs **`scripts/gcp-deploy.mjs`**, which:
 
-1. **`gcloud run deploy`** from the **`Dockerfile`**, with **`--set-env-vars`** built from **`.env`** (comma-safe escaping like **`bedrock`**’s **`setEnvVarsGcloud`**). **`PORT`**, **`HOST`**, **`HOSTED_URL`**, and deploy-only **`GCP_*`** keys are **not** copied from `.env` as-is (your tunnel **`HOST`** would break production). Optional **`GCP_PUBLIC_APP_URL`** pre-seeds **`HOST`** on first deploy if you use a custom domain.
-2. **`gcloud run services update --update-env-vars`** sets **`HOST`** and **`HOSTED_URL`** on the revision to the public URL (**`GCP_PUBLIC_APP_URL`** if set, otherwise the **`*.run.app`** URL from **`gcloud run services describe`**). That matches what Shopify should load in the admin iframe and what **`@shopify/shopify-api`** expects for OAuth.
+1. Resolves a public **`HOST` / `HOSTED_URL`** *before* **`gcloud run deploy`**: **`GCP_PUBLIC_APP_URL`** if set, else the current service URL, else the default **`https://SERVICE-PROJECT_NUMBER.REGION.run.app`**, so **`@shopify/shopify-api`** always has **`hostName`** on first boot (tunnel **`HOST`** in **`.env`** is never sent). Then **`gcloud run deploy`** with **`--set-env-vars`** from **`.env`** (comma-safe escaping like **`bedrock`**’s **`setEnvVarsGcloud`**), plus that public host pair. **`PORT`** and deploy-only **`GCP_*`** keys from **`.env`** are omitted.
+2. **`gcloud run services update --update-env-vars`** reapplies **`HOST`** / **`HOSTED_URL`** using **`GCP_PUBLIC_APP_URL`** or the URL from **`gcloud run services describe`**.
 3. Writes **`HOSTED_URL`** (the **`*.run.app`** URL) into **`.env`** for your reference.
 4. Generates **`shopify.app.live.toml`** from **`shopify.app.toml`** with **`application_url`** and **`redirect_urls`** pointing at that public URL (file is gitignored). You can **`shopify app deploy -c live`** so **Partners** stays in sync (fixes **`example.com`** / wrong iframe URLs).
 5. If **`SHOPIFY_APP_DEPLOY=1`** in **`.env`**, runs **`npx @shopify/cli app deploy -c live --allow-updates`** after step 4 (requires Shopify CLI login).
