@@ -4,7 +4,15 @@ You only need: **build the app → run `node server.js` in a container → set t
 
 ## One way to ship it
 
-From the repo root (uses the **`Dockerfile`**):
+From the repo root, set **`GCP_PROJECT`** (and optionally **`GCP_REGION`**, **`GCP_SERVICE`**, etc.) in **`.env`**, then:
+
+```bash
+npm run deploy
+```
+
+This runs **`gcloud run deploy`** with **`--source .`** (uses the **`Dockerfile`**). See **`.env.example`** for all **`GCP_*`** options (memory, CPU, **`GCP_RUN_ENV_KEYS`** to push selected vars to the revision).
+
+Equivalent one-liner without npm:
 
 ```bash
 gcloud run deploy kitsuchan --source . --region us-central1 --allow-unauthenticated

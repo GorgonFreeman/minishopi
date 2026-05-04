@@ -17,7 +17,8 @@
     "shopify:dev": "node scripts/shopify-dev.mjs",
     "tunnel": "node scripts/tunnel-with-sync.mjs",
     "tunnel:raw": "cloudflared tunnel --url http://localhost:3121",
-    "shopify:build": "npx --yes @shopify/cli@latest app build"
+    "shopify:build": "npx --yes @shopify/cli@latest app build",
+    "deploy": "node --env-file=.env scripts/gcp-deploy.mjs"
   },
   "dependencies": {
     "@shopify/app-bridge-react": "^4.2.10",
