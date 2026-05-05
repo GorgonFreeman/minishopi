@@ -16,3 +16,16 @@ export const shopify = shopifyApi({
   apiVersion: ApiVersion.April26,
   isEmbeddedApp: true,
 });
+
+const shopIdCache = new Map();
+
+/** Resolve the shop's GraphQL gid (e.g. `gid://shopify/Shop/123`), cached per shop domain. */
+export async function getShopId(client, shop) {
+  const cached = shopIdCache.get(shop);
+  if (cached) return cached;
+  const { data } = await client.request('{ shop { id } }');
+  const id = data?.shop?.id;
+  if (!id) throw new Error('Could not resolve shop id');
+  shopIdCache.set(shop, id);
+  return id;
+}

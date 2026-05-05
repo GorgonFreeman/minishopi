@@ -21,6 +21,17 @@ const mimeByExt = {
   '.woff2': 'font/woff2',
 };
 
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  if (chunks.length === 0) return null;
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    return null;
+  }
+}
+
 async function loadApiHandlers() {
   const map = new Map();
   const apiDir = resolve(__dirname, 'api');
@@ -151,8 +162,12 @@ async function handleRequest(req, res) {
       res.end(JSON.stringify({ error: 'Not found' }));
       return;
     }
+    let body = null;
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      body = await readJsonBody(req);
+    }
     try {
-      await handler(req, res, { shop, session: existing });
+      await handler(req, res, { shop, session: existing, body });
     } catch (err) {
       console.error(err);
       if (!res.writableEnded) {
