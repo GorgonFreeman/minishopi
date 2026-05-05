@@ -1,12 +1,28 @@
 #!/usr/bin/env node
 /**
  * `npm run deploy`
- * 1) Resolve public app URL (GCP_PUBLIC_APP_URL > current Cloud Run URL > deterministic *.run.app).
- * 2) Build --set-env-vars from .env, minus PORT and GCP_*; add HOST=<public>.
- * 3) gcloud run deploy --source . (Dockerfile-based) with --allow-unauthenticated.
- * 4) Read the actual deployed URL; warn if different from prediction.
- * 5) Patch shopify.app.toml application_url + [auth].redirect_urls in place.
- * 6) shopify app deploy --allow-updates so Partners + extensions match the live URL.
+ *
+ * Cloud Run gives every service two valid URLs (both route to the same revision):
+ *   • Canonical: https://SERVICE-PROJECTNUMBER.REGION.run.app    (preferred — predictable)
+ *   • Legacy:    https://SERVICE-RANDOMHASH-REGIONCODE.a.run.app (older format; still active)
+ * `gcloud run services describe` may report either as `status.url` depending on service age and
+ * gcloud version. Shopify Partners only redirects to URLs we register, so we must always pick
+ * the same one — this script always picks the canonical project-number form.
+ *
+ * Steps:
+ * 1) Resolve canonical URL: GCP_PUBLIC_APP_URL > project-number form found in
+ *    `status.url` / `status.urls[]` / `run.googleapis.com/urls` > regex-matched canonical-shape
+ *    URL > constructed from project number.
+ * 2) Build --set-env-vars from .env (minus PORT, HOST, GCP_*), append HOST=<canonical>.
+ * 3) gcloud run deploy --source . with --allow-unauthenticated.
+ * 4) Re-resolve canonical URL post-deploy; bail if absent.
+ * 5) If canonical URL ≠ host used for deploy, `gcloud run services update --update-env-vars=HOST=…`.
+ * 6) Patch shopify.app.toml application_url + [auth].redirect_urls.
+ * 7) `shopify app deploy --allow-updates` so Partners matches the live URL.
+ *
+ * GCP_REGION must match the Cloud Run region (default us-central1 is wrong for AU services).
+ * `shopify.app.toml` has `automatically_update_urls_on_dev = true`, so `shopify app dev` rewrites
+ * URLs to the dev tunnel; this flow restores them to production on release.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -25,14 +41,16 @@ if (!project) {
 }
 
 const service = readServiceName();
-const predictedUrl = resolvePublicUrl({ project, region, service });
-if (!predictedUrl) {
+console.log('gcloud target', { project, region, service });
+
+const hostForDeploy = resolvePublicUrl({ project, region, service });
+if (!hostForDeploy) {
   console.error('Could not resolve public URL — set GCP_PUBLIC_APP_URL in .env or check `gcloud auth login`.');
   process.exit(1);
 }
-console.log('predictedUrl', predictedUrl);
+console.log('hostForDeploy (HOST + OAuth base before deploy)', hostForDeploy);
 
-const setEnvVars = buildSetEnvVars(predictedUrl);
+const setEnvVars = buildSetEnvVars(hostForDeploy);
 
 const deployRes = spawnSync(
   'gcloud',
@@ -50,10 +68,36 @@ if (deployRes.status !== 0) {
   process.exit(deployRes.status ?? 1);
 }
 
-const actualUrl = describeServiceUrl({ project, region, service });
-const publicUrl = (actualUrl || predictedUrl).replace(/\/+$/u, '');
-if (actualUrl && actualUrl !== predictedUrl) {
-  console.warn(`actualUrl differs from predictedUrl. Using ${ publicUrl } for shopify.app.toml.`);
+const publicUrl = resolvePublicUrl({ project, region, service });
+if (!publicUrl) {
+  console.error(
+    'After deploy, gcloud could not derive a public URL for this service. '
+      + 'Fix GCP_REGION (must match Cloud Run region, e.g. australia-southeast1), GCP_SERVICE (Cloud Run service name), '
+      + 'and GCP_PROJECT, or set GCP_PUBLIC_APP_URL to the exact https://… URL and redeploy.',
+  );
+  process.exit(1);
+}
+console.log('publicUrl (canonical, used for shopify.app.toml + HOST)', publicUrl);
+
+if (publicUrl !== hostForDeploy) {
+  console.warn(
+    `Canonical URL changed between pre-deploy resolution and post-deploy: deploy=${ hostForDeploy } actual=${ publicUrl }`,
+  );
+  console.warn('Syncing HOST on the Cloud Run service to the canonical URL.');
+  const updateHost = spawnSync(
+    'gcloud',
+    [
+      'run', 'services', 'update', service,
+      '--project', project,
+      '--region', region,
+      `--update-env-vars=HOST=${ publicUrl }`,
+    ],
+    { stdio: 'inherit', cwd: root },
+  );
+  if (updateHost.status !== 0) {
+    console.error('gcloud run services update failed; set HOST to the canonical URL in Cloud Run console.');
+    process.exit(updateHost.status ?? 1);
+  }
 }
 
 writeShopifyAppToml(publicUrl);
@@ -81,32 +125,82 @@ function readServiceName() {
   return 'app';
 }
 
-function resolvePublicUrl({ project, region, service }) {
-  const fromEnv = process.env.GCP_PUBLIC_APP_URL?.trim().replace(/\/+$/u, '');
-  if (fromEnv) return fromEnv;
-
-  const existing = describeServiceUrl({ project, region, service });
-  if (existing) return existing;
-
-  const num = spawnSync(
+function fetchProjectNumber(project) {
+  const r = spawnSync(
     'gcloud',
     [ 'projects', 'describe', project, '--format', 'value(projectNumber)' ],
     { encoding: 'utf8', cwd: root },
   );
-  if (num.status !== 0 || !num.stdout?.trim()) return '';
-  return `https://${ service }-${ num.stdout.trim() }.${ region }.run.app`;
+  if (r.status !== 0) {
+    if (r.stderr?.trim()) console.error(r.stderr.trim());
+    return '';
+  }
+  return r.stdout?.trim() ?? '';
 }
 
-function describeServiceUrl({ project, region, service }) {
+/**
+ * All URLs gcloud knows about for this service: `status.url`, `status.urls[]`,
+ * and the JSON-encoded `metadata.annotations['run.googleapis.com/urls']`.
+ * Older services advertise the legacy hash URL in `status.url` while still listing
+ * the canonical project-number URL in the annotation, so we have to read both.
+ */
+function fetchServiceUrls({ project, region, service }) {
   const r = spawnSync(
     'gcloud',
-    [ 'run', 'services', 'describe', service, '--project', project, '--region', region, '--format', 'value(status.url)' ],
+    [ 'run', 'services', 'describe', service, '--project', project, '--region', region, '--format', 'json' ],
     { encoding: 'utf8', cwd: root },
   );
-  if (r.status === 0 && r.stdout?.trim()) {
-    return r.stdout.trim().replace(/\/+$/u, '');
+  if (r.status !== 0) {
+    if (r.stderr?.trim()) console.error(r.stderr.trim());
+    return [];
   }
-  return '';
+  let parsed;
+  try {
+    parsed = JSON.parse(r.stdout ?? '');
+  } catch {
+    return [];
+  }
+  const out = new Set();
+  if (parsed?.status?.url) out.add(parsed.status.url);
+  for (const u of parsed?.status?.urls ?? []) out.add(u);
+  const ann = parsed?.metadata?.annotations?.[ 'run.googleapis.com/urls' ];
+  if (typeof ann === 'string') {
+    try {
+      const list = JSON.parse(ann);
+      if (Array.isArray(list)) for (const u of list) out.add(u);
+    } catch {
+      /* ignore malformed annotation */
+    }
+  }
+  return [ ...out ].map((u) => String(u).replace(/\/+$/u, ''));
+}
+
+const canonicalUrlRe = /^https:\/\/[^./]+-\d{3,}\.[a-z0-9-]+\.run\.app$/u;
+
+function pickCanonicalUrl({ urls, projectNumber, region, service }) {
+  const expected = projectNumber
+    ? `https://${ service }-${ projectNumber }.${ region }.run.app`
+    : '';
+  if (expected && urls.includes(expected)) return expected;
+  const fromList = urls.find((u) => canonicalUrlRe.test(u));
+  if (fromList) return fromList;
+  if (expected) return expected;
+  return urls[ 0 ] ?? '';
+}
+
+function resolvePublicUrl({ project, region, service }) {
+  const fromEnv = process.env.GCP_PUBLIC_APP_URL?.trim().replace(/\/+$/u, '');
+  if (fromEnv) return fromEnv;
+  const projectNumber = fetchProjectNumber(project);
+  const urls = fetchServiceUrls({ project, region, service });
+  const canonical = pickCanonicalUrl({ urls, projectNumber, region, service });
+  if (urls.length > 0) {
+    const others = urls.filter((u) => u !== canonical);
+    if (others.length > 0) {
+      console.log('cloudRunUrls (alternates available)', others);
+    }
+  }
+  return canonical;
 }
 
 function buildSetEnvVars(publicUrl) {
