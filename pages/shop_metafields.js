@@ -3,9 +3,45 @@ import { gidToId } from '../utils.js';
 
 const PAGE_SIZE = 100;
 const DEFAULT_TYPE = 'single_line_text_field';
+const PINNED_NAMESPACE = 'kitsuchan';
+const PINNED_KEY = 'shop_metafields_pinned';
+const PINNED_TYPE = 'single_line_text_field';
 
 function uniqKey(m) {
   return `${ m.namespace }\x1e${ m.key }`;
+}
+
+function isPinnedStorageMetafield(m) {
+  return m?.namespace === PINNED_NAMESPACE && m?.key === PINNED_KEY;
+}
+
+function parsePinnedCsv(raw) {
+  if (raw == null || typeof raw !== 'string') return [];
+  const out = [];
+  const seen = new Set();
+  for (const part of raw.split(',')) {
+    const s = part.trim();
+    if (!s) continue;
+    const dot = s.indexOf('.');
+    if (dot <= 0 || dot === s.length - 1) continue;
+    const ns = s.slice(0, dot);
+    const ky = s.slice(dot + 1);
+    const uk = `${ ns }\x1e${ ky }`;
+    if (!seen.has(uk)) {
+      seen.add(uk);
+      out.push(uk);
+    }
+  }
+  return out;
+}
+
+function pinnedUniqKeysToCsv(pinnedUniqKeys) {
+  return pinnedUniqKeys
+    .map((uk) => {
+      const i = uk.indexOf('\x1e');
+      return `${ uk.slice(0, i) }.${ uk.slice(i + 1) }`;
+    })
+    .join(',');
 }
 
 class ShopMetafieldsPage extends LitElement {
@@ -24,6 +60,7 @@ class ShopMetafieldsPage extends LitElement {
     busyAction: { state: true },
     showAdd: { state: true },
     rowError: { state: true },
+    pinnedList: { state: true },
   };
 
   constructor() {
@@ -42,6 +79,7 @@ class ShopMetafieldsPage extends LitElement {
     this.busyAction = null;
     this.showAdd = false;
     this.rowError = {};
+    this.pinnedList = [];
   }
 
   createRenderRoot() {
@@ -76,6 +114,9 @@ class ShopMetafieldsPage extends LitElement {
     const data = await fetch(`/api/shopMetafields?${ q }`).then((r) => r.json());
     if (!data.ok) {
       throw new Error(data.errors?.[ 0 ]?.message ?? data.error ?? 'Request failed');
+    }
+    if (typeof data.pinnedCsv === 'string') {
+      this.pinnedList = parsePinnedCsv(data.pinnedCsv);
     }
     const incoming = data.metafields ?? [];
     this.cursor = data.pageInfo?.endCursor ?? null;
@@ -131,6 +172,61 @@ class ShopMetafieldsPage extends LitElement {
   toggleAdd() {
     this.showAdd = !this.showAdd;
     this.rowError = { ...this.rowError, add: null };
+  }
+
+  comparePinnedSort(a, b) {
+    const ka = uniqKey(a);
+    const kb = uniqKey(b);
+    const ia = this.pinnedList.indexOf(ka);
+    const ib = this.pinnedList.indexOf(kb);
+    const aPinned = ia >= 0;
+    const bPinned = ib >= 0;
+    if (aPinned && bPinned) return ia - ib;
+    if (aPinned) return -1;
+    if (bPinned) return 1;
+    return ka.localeCompare(kb);
+  }
+
+  async persistPinnedCsv(pinnedUniqKeys) {
+    const value = pinnedUniqKeysToCsv(pinnedUniqKeys);
+    const data = await fetch(`/api/shopMetafieldsSet?${ new URLSearchParams({ shop: this.shop }) }`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        namespace: PINNED_NAMESPACE,
+        key: PINNED_KEY,
+        type: PINNED_TYPE,
+        value,
+      }),
+    }).then((r) => r.json());
+    if (!data.ok) {
+      throw new Error(data.errors?.[ 0 ]?.message ?? data.error ?? 'Could not save pins');
+    }
+  }
+
+  async togglePin(m) {
+    if (!this.shop || this.busyId !== null || isPinnedStorageMetafield(m)) return;
+    const k = uniqKey(m);
+    const idx = this.pinnedList.indexOf(k);
+    const next = idx >= 0
+      ? [ ...this.pinnedList.slice(0, idx), ...this.pinnedList.slice(idx + 1) ]
+      : [ ...this.pinnedList, k ];
+
+    this.busyId = m.id;
+    this.busyAction = 'pin';
+    this.rowError = { ...this.rowError, [ m.id ]: null };
+    try {
+      await this.persistPinnedCsv(next);
+      this.pinnedList = next;
+    } catch (err) {
+      this.rowError = {
+        ...this.rowError,
+        [ m.id ]: err instanceof Error ? err.message : String(err),
+      };
+    } finally {
+      this.busyId = null;
+      this.busyAction = null;
+    }
   }
 
   async loadMore() {
@@ -199,6 +295,12 @@ class ShopMetafieldsPage extends LitElement {
         throw new Error(data.errors?.[ 0 ]?.message ?? data.error ?? 'Delete failed');
       }
       this.rows = this.rows.filter((r) => uniqKey(r) !== uniqKey(m));
+      const pk = uniqKey(m);
+      if (this.pinnedList.includes(pk)) {
+        const nextPins = this.pinnedList.filter((x) => x !== pk);
+        this.pinnedList = nextPins;
+        this.persistPinnedCsv(nextPins).catch(() => {});
+      }
       this.open = stripKey(this.open, m.id);
       this.editing = stripKey(this.editing, m.id);
       this.confirmingDelete = stripKey(this.confirmingDelete, m.id);
@@ -302,24 +404,41 @@ class ShopMetafieldsPage extends LitElement {
     const anyBusy = this.busyId !== null;
     const saving = isThisRow && this.busyAction === 'save';
     const deleting = isThisRow && this.busyAction === 'delete';
+    const pinning = isThisRow && this.busyAction === 'pin';
+    const pinned = this.pinnedList.includes(uniqKey(m));
+    const pinDisabled = anyBusy && !pinning;
     const err = this.rowError[ m.id ];
 
     return html`
       <s-box border-block-end-width='base' border-color='subdued'>
-        <s-clickable
-          @click=${ () => this.toggleOpen(m.id) }
-          accessibility-label=${ `${ m.namespace } ${ m.key }, ${ open ? 'collapse' : 'expand' }` }
-        >
-          <s-box padding='base'>
-            <s-stack direction='inline' align-items='center' justify-content='space-between'>
-              <s-stack direction='block' gap='small-100'>
-                <s-text type='strong'>${ m.namespace } · ${ m.key }</s-text>
-                <s-text color='subdued'>${ m.type }</s-text>
+        <s-box padding='base' padding-inline-start='small'>
+          <s-stack direction='inline' align-items='center' justify-content='space-between' gap='small'>
+            <s-clickable
+              @click=${ () => { if (!pinDisabled) this.togglePin(m); } }
+              ?disabled=${ pinDisabled }
+              accessibility-label=${ pinned ? `Unpin ${ m.namespace } · ${ m.key }` : `Pin ${ m.namespace } · ${ m.key }` }
+            >
+              <s-box padding-inline='small-100' padding-block='small-100'>
+                ${ pinning
+                  ? html`<s-spinner accessibility-label='Updating pin' size='small'></s-spinner>`
+                  : html`<s-icon type='pin' size='small' color=${ pinned ? 'base' : 'subdued' }></s-icon>` }
+              </s-box>
+            </s-clickable>
+            <s-clickable
+              style='flex:1;min-width:0'
+              @click=${ () => this.toggleOpen(m.id) }
+              accessibility-label=${ `${ m.namespace } ${ m.key }, ${ open ? 'collapse' : 'expand' }` }
+            >
+              <s-stack direction='inline' align-items='center' justify-content='space-between' gap='small'>
+                <s-stack direction='block' gap='small-100' style='min-width:0'>
+                  <s-text type='strong'>${ m.namespace } · ${ m.key }</s-text>
+                  <s-text color='subdued'>${ m.type }</s-text>
+                </s-stack>
+                <s-text color='subdued'>${ open ? '▼' : '▶' }</s-text>
               </s-stack>
-              <s-text color='subdued'>${ open ? '▼' : '▶' }</s-text>
-            </s-stack>
-          </s-box>
-        </s-clickable>
+            </s-clickable>
+          </s-stack>
+        </s-box>
 
         ${ open
           ? html`
@@ -424,7 +543,8 @@ class ShopMetafieldsPage extends LitElement {
   }
 
   render() {
-    const sorted = [ ...this.rows ].sort((a, b) => uniqKey(a).localeCompare(uniqKey(b)));
+    const visible = this.rows.filter((m) => !isPinnedStorageMetafield(m));
+    const sorted = [ ...visible ].sort((a, b) => this.comparePinnedSort(a, b));
     return html`
       <s-page heading='Shop metafields'>
         ${ this.renderHeader(sorted) }

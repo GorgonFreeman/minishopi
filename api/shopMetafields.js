@@ -5,6 +5,9 @@ import { shopify } from '../shopify-server.js';
 const QUERY = `#graphql
   query ShopMetafields($first: Int!, $after: String) {
     shop {
+      metafield(namespace: "kitsuchan", key: "shop_metafields_pinned") {
+        value
+      }
       metafields(first: $first, after: $after) {
         pageInfo {
           hasNextPage
@@ -38,11 +41,13 @@ export default async function shopMetafields(req, res, { session }) {
     const conn = data?.shop?.metafields;
     const nodes = conn?.nodes ?? [];
     const pageInfo = conn?.pageInfo ?? {};
+    const pinnedCsv = data?.shop?.metafield?.value ?? '';
 
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(
       JSON.stringify({
         ok: true,
+        pinnedCsv,
         metafields: nodes,
         pageInfo: {
           hasNextPage: Boolean(pageInfo.hasNextPage),
