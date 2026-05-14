@@ -77,6 +77,13 @@ class ThemeKillerPage extends LitElement {
     return list;
   }
 
+  formatSavedAt(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
   async submitDelete() {
     const ids = this.selectedIds();
     if (!this.shop || ids.length === 0) return;
@@ -128,7 +135,7 @@ class ThemeKillerPage extends LitElement {
                 </div>
                 ${ this.sortedThemes().map(
                   (t) => html`
-                    <div style='display:flex;gap:0.75rem;align-items:center;margin-bottom:0.5rem'>
+                    <div style='display:flex;gap:0.75rem;align-items:baseline;margin-bottom:0.5rem;flex-wrap:wrap'>
                       <input
                         type='checkbox'
                         ?disabled=${ t.role === 'MAIN' }
@@ -136,6 +143,7 @@ class ThemeKillerPage extends LitElement {
                         @change=${ (e) => this.toggle(t.id, t.role, e.target.checked) }
                       />
                       <span>${ t.name }</span>
+                      <span style='font-size:0.8125rem;opacity:0.62'>Saved ${ this.formatSavedAt(t.updatedAt) }</span>
                       ${ t.role === 'MAIN'
                         ? html`<span style='opacity:0.75;font-size:0.875rem'>Published (protected)</span>`
                         : nothing }
