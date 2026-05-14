@@ -23,7 +23,7 @@ export default async function themes(req, res, { session }) {
 
   try {
     const client = new shopify.clients.Graphql({ session });
-    const { data } = await client.request(QUERY, { variables: { first: 50 } });
+    const { data } = await client.request(QUERY, { variables: { first: 110 } });
     const nodes = data?.themes?.nodes ?? [];
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ ok: true, themes: nodes }));
