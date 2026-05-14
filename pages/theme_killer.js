@@ -114,25 +114,29 @@ class ThemeKillerPage extends LitElement {
       <s-page heading='Theme killer'>
         <s-section>
           ${ this.error ? html`<s-paragraph tone='critical'>${ this.error }</s-paragraph>` : nothing }
+          <div
+            style='display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:0.75rem;margin-bottom:0.75rem'
+          >
+            <label style='display:flex;flex-direction:column;gap:0.25rem;max-width:20rem;font-size:0.875rem'>
+              Sort
+              <select
+                .value=${ this.sortMode }
+                ?disabled=${ this.loading }
+                @change=${ (e) => {
+                  this.sortMode = e.target.value;
+                } }
+              >
+                <option value='updatedAt-desc'>Last updated (newest first)</option>
+                <option value='updatedAt-asc'>Last updated (oldest first)</option>
+                <option value='name-asc'>Name A-Z</option>
+                <option value='name-desc'>Name Z-A</option>
+              </select>
+            </label>
+            <s-button icon='refresh' @click=${ () => window.location.reload() }>Refresh</s-button>
+          </div>
           ${ this.loading
             ? html`<s-paragraph>Loading…</s-paragraph>`
             : html`
-                <div style='margin-bottom:0.75rem'>
-                  <label style='display:flex;flex-direction:column;gap:0.25rem;max-width:20rem;font-size:0.875rem'>
-                    Sort
-                    <select
-                      .value=${ this.sortMode }
-                      @change=${ (e) => {
-                        this.sortMode = e.target.value;
-                      } }
-                    >
-                      <option value='updatedAt-desc'>Last updated (newest first)</option>
-                      <option value='updatedAt-asc'>Last updated (oldest first)</option>
-                      <option value='name-asc'>Name A-Z</option>
-                      <option value='name-desc'>Name Z-A</option>
-                    </select>
-                  </label>
-                </div>
                 ${ this.sortedThemes().map(
                   (t) => html`
                     <div style='display:flex;gap:0.75rem;align-items:baseline;margin-bottom:0.5rem;flex-wrap:wrap'>
