@@ -1,4 +1,12 @@
 {
-  "name": "product_sync",
-  "welcome": "Bienvenue dans l'extension {{target}}!"
+  "name": "Synchroniser le produit",
+  "heading": "Synchroniser le produit",
+  "description": "Envoyer ce produit au pipeline de synchronisation du catalogue Apex.",
+  "sync": "Synchroniser",
+  "done": "Terminé",
+  "close": "Fermer",
+  "syncing": "Synchronisation du produit {{id}}…",
+  "success": "Produit {{id}} synchronisé avec succès.",
+  "error": "Échec de la synchronisation : {{message}}",
+  "no-product": "Aucun produit en contexte."
 }

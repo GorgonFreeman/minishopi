@@ -1,4 +1,12 @@
 {
-  "name": "product_sync",
-  "welcome": "Welcome to the {{target}} extension!"
+  "name": "Sync Product",
+  "heading": "Sync Product",
+  "description": "Send this product to the Apex catalogue sync pipeline.",
+  "sync": "Sync",
+  "done": "Done",
+  "close": "Close",
+  "syncing": "Syncing product {{id}}…",
+  "success": "Product {{id}} synced successfully.",
+  "error": "Sync failed: {{message}}",
+  "no-product": "No product in context."
 }
