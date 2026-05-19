@@ -12,7 +12,7 @@ export default async () => {
 
 function Extension() {
   const { close, data, i18n, extension } = shopify;
-  const isBulk = extension.target === BULK_TARGET;
+  const isBulk = String(extension.target) === BULK_TARGET;
 
   const productIds = (data.selected ?? [])
     .map((item) => (item?.id ?? '').split('/').pop())
