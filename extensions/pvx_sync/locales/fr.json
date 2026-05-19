@@ -1,12 +1,17 @@
 {
   "name": "Synchroniser vers PVX",
   "heading": "Synchroniser vers PVX",
+  "heading-bulk": "Synchroniser vers PVX",
   "description": "Réconcilier ce produit avec PVX.",
+  "description-bulk": "Réconcilier {{count}} produits sélectionnés avec PVX.",
   "sync": "Synchroniser",
   "done": "Terminé",
   "close": "Fermer",
   "syncing": "Synchronisation du produit {{id}}…",
+  "syncing-bulk": "Synchronisation de {{count}} produits…",
   "success": "Produit {{id}} synchronisé avec succès.",
+  "success-bulk": "{{count}} produits synchronisés avec succès.",
   "error": "Échec de la synchronisation : {{message}}",
-  "no-product": "Aucun produit en contexte."
+  "no-product": "Aucun produit en contexte.",
+  "no-products": "Aucun produit sélectionné."
 }

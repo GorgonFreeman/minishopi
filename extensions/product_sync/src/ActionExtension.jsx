@@ -1,109 +1,113 @@
 /** @jsxImportSource preact */
-import "@shopify/ui-extensions/preact";
-import { render } from "preact";
-import { useState } from "preact/hooks";
+import '@shopify/ui-extensions/preact';
+import { render } from 'preact';
+import { useState } from 'preact/hooks';
 
-const SYNC_URL =
-  "https://australia-southeast1-foxtware.cloudfunctions.net/apexCatalogueShopifyToShopify";
+const SYNC_URL = 'https://australia-southeast1-foxtware.cloudfunctions.net/apexCatalogueShopifyToShopify';
+const BULK_TARGET = 'admin.product-index.selection-action.render';
 
 export default async () => {
   render(<Extension />, document.body);
 };
 
 function Extension() {
-  const { close, data, i18n } = shopify;
-  const gid = data.selected?.[0]?.id ?? "";
-  const productId = gid.split("/").pop() ?? "";
+  const { close, data, i18n, extension } = shopify;
+  const isBulk = extension.target === BULK_TARGET;
 
-  const [status, setStatus] = useState("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const productIds = (data.selected ?? [])
+    .map((item) => (item?.id ?? '').split('/').pop())
+    .filter(Boolean);
+  const count = productIds.length;
+
+  const [ status, setStatus ] = useState('idle');
+  const [ errorMessage, setErrorMessage ] = useState('');
 
   async function runSync() {
-    if (!productId) return;
-    setStatus("syncing");
-    setErrorMessage("");
+    if (count === 0) return;
+    setStatus('syncing');
+    setErrorMessage('');
     try {
       const res = await fetch(SYNC_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productIds }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || body.success !== true) {
-        throw new Error(body.error ?? `HTTP ${res.status}`);
+        throw new Error(body.error ?? `HTTP ${ res.status }`);
       }
-      setStatus("success");
+      setStatus('success');
     } catch (err) {
-      console.log("productSyncError", err);
+      console.log('productSyncError', err);
       setErrorMessage(err instanceof Error ? err.message : String(err));
-      setStatus("error");
+      setStatus('error');
     }
   }
 
-  const isSyncing = status === "syncing";
-  const isSuccess = status === "success";
-  const isError = status === "error";
-  const hasProduct = Boolean(productId);
+  const isSyncing = status === 'syncing';
+  const isSuccess = status === 'success';
+  const isError = status === 'error';
+  const hasProducts = count > 0;
+
+  const headingKey = isBulk ? 'heading-bulk' : 'heading';
+  const descriptionText = isBulk
+    ? i18n.translate('description-bulk', { count })
+    : i18n.translate('description');
+  const syncingText = isBulk
+    ? i18n.translate('syncing-bulk', { count })
+    : i18n.translate('syncing', { id: productIds[ 0 ] ?? '' });
+  const successText = isBulk
+    ? i18n.translate('success-bulk', { count })
+    : i18n.translate('success', { id: productIds[ 0 ] ?? '' });
+  const emptyText = isBulk ? i18n.translate('no-products') : i18n.translate('no-product');
 
   return (
-    <s-admin-action heading={i18n.translate("heading")}>
-      {isSuccess ? (
-        <s-button
-          slot="primary-action"
-          onClick={() => {
-            close();
-          }}
-        >
-          {i18n.translate("done")}
+    <s-admin-action heading={ i18n.translate(headingKey) }>
+      { isSuccess ? (
+        <s-button slot="primary-action" onClick={ () => { close(); } }>
+          { i18n.translate('done') }
         </s-button>
       ) : (
         <s-button
           slot="primary-action"
-          disabled={!hasProduct || isSyncing}
-          loading={isSyncing}
-          onClick={runSync}
+          disabled={ !hasProducts || isSyncing }
+          loading={ isSyncing }
+          onClick={ runSync }
         >
-          {i18n.translate("sync")}
+          { i18n.translate('sync') }
         </s-button>
-      )}
-      <s-button
-        slot="secondary-actions"
-        onClick={() => {
-          close();
-        }}
-      >
-        {i18n.translate("close")}
+      ) }
+      <s-button slot="secondary-actions" onClick={ () => { close(); } }>
+        { i18n.translate('close') }
       </s-button>
 
       <s-stack direction="block" gap="base">
-        <s-text>{i18n.translate("description")}</s-text>
+        <s-text>{ descriptionText }</s-text>
 
-        {!hasProduct && (
+        { !hasProducts && (
           <s-banner tone="warning">
-            <s-text>{i18n.translate("no-product")}</s-text>
+            <s-text>{ emptyText }</s-text>
           </s-banner>
-        )}
+        ) }
 
-        {isSyncing && (
+        { isSyncing && (
           <s-stack direction="inline" gap="base" align-items="center">
             <s-spinner />
-            <s-text>{i18n.translate("syncing", { id: productId })}</s-text>
+            <s-text>{ syncingText }</s-text>
           </s-stack>
-        )}
+        ) }
 
-        {isSuccess && (
+        { isSuccess && (
           <s-banner tone="success">
-            <s-text>{i18n.translate("success", { id: productId })}</s-text>
+            <s-text>{ successText }</s-text>
           </s-banner>
-        )}
+        ) }
 
-        {isError && (
+        { isError && (
           <s-banner tone="critical">
-            <s-text>
-              {i18n.translate("error", { message: errorMessage })}
-            </s-text>
+            <s-text>{ i18n.translate('error', { message: errorMessage }) }</s-text>
           </s-banner>
-        )}
+        ) }
       </s-stack>
     </s-admin-action>
   );

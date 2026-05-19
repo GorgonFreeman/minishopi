@@ -1,12 +1,17 @@
 {
   "name": "Synchroniser le produit",
   "heading": "Synchroniser le produit",
+  "heading-bulk": "Synchroniser les produits",
   "description": "Synchroniser ce produit vers d'autres régions.",
+  "description-bulk": "Synchroniser {{count}} produits sélectionnés vers d'autres régions.",
   "sync": "Synchroniser",
   "done": "Terminé",
   "close": "Fermer",
   "syncing": "Synchronisation du produit {{id}}…",
+  "syncing-bulk": "Synchronisation de {{count}} produits…",
   "success": "Produit {{id}} synchronisé avec succès.",
+  "success-bulk": "{{count}} produits synchronisés avec succès.",
   "error": "Échec de la synchronisation : {{message}}",
-  "no-product": "Aucun produit en contexte."
+  "no-product": "Aucun produit en contexte.",
+  "no-products": "Aucun produit sélectionné."
 }

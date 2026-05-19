@@ -1,12 +1,17 @@
 {
   "name": "Sync Product",
   "heading": "Sync Product",
+  "heading-bulk": "Sync products",
   "description": "Sync this product to other regions.",
+  "description-bulk": "Sync {{count}} selected products to other regions.",
   "sync": "Sync",
   "done": "Done",
   "close": "Close",
   "syncing": "Syncing product {{id}}…",
+  "syncing-bulk": "Syncing {{count}} products…",
   "success": "Product {{id}} synced successfully.",
+  "success-bulk": "{{count}} products synced successfully.",
   "error": "Sync failed: {{message}}",
-  "no-product": "No product in context."
+  "no-product": "No product in context.",
+  "no-products": "No products selected."
 }

@@ -1,12 +1,17 @@
 {
   "name": "Sync to PVX",
   "heading": "Sync to PVX",
+  "heading-bulk": "Sync to PVX",
   "description": "Reconcile this product with PVX.",
+  "description-bulk": "Reconcile {{count}} selected products with PVX.",
   "sync": "Sync",
   "done": "Done",
   "close": "Close",
   "syncing": "Syncing product {{id}}…",
+  "syncing-bulk": "Syncing {{count}} products…",
   "success": "Product {{id}} synced successfully.",
+  "success-bulk": "{{count}} products synced successfully.",
   "error": "Sync failed: {{message}}",
-  "no-product": "No product in context."
+  "no-product": "No product in context.",
+  "no-products": "No products selected."
 }
